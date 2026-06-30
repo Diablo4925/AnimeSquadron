@@ -15,7 +15,7 @@ local oldUI = Player:WaitForChild("PlayerGui"):FindFirstChild("AnimeSquadronUI")
 if oldUI then oldUI:Destroy() end
 
 local CONFIG_FILE_NAME = "webhook_config.json"
-local DISCORD_WEBHOOK_URL = "https://discord.com/api/webhooks/1515329562655985714/US69wJjqjyGwG1u4QkVq4cBIqWS4dvrn9QhrDSceWddnQo-1FTpUNCMIy5gcMwBwuPbl"
+local DISCORD_WEBHOOK_URL = ""
 
 local config = {
     url = DISCORD_WEBHOOK_URL,

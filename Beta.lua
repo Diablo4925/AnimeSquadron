@@ -11,6 +11,23 @@ local TeleportService = game:GetService("TeleportService")
 local Player = Players.LocalPlayer
 local Mouse = Player:GetMouse()
 
+local GameRemotes = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("Game")
+local ReplayEvent = GameRemotes and GameRemotes:FindFirstChild("replay")
+local NextEvent = GameRemotes and GameRemotes:FindFirstChild("next")
+local PlayerRemotes = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("Players")
+local preventAfkEv = PlayerRemotes and PlayerRemotes:FindFirstChild("prevent_afk")
+
+task.spawn(function()
+    if not ReplayEvent or not NextEvent then
+        local remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
+        local gameRemotes = remotes and remotes:WaitForChild("Game", 10)
+        if gameRemotes then
+            ReplayEvent = ReplayEvent or gameRemotes:WaitForChild("replay", 10)
+            NextEvent = NextEvent or gameRemotes:WaitForChild("next", 10)
+        end
+    end
+end)
+
 local oldUI = Player:WaitForChild("PlayerGui"):FindFirstChild("AnimeSquadronUI")
 if oldUI then oldUI:Destroy() end
 
@@ -512,21 +529,45 @@ task.spawn(function()
     end
 end)
 
-ReplicatedStorage.Remotes.Game.ending.OnClientEvent:Connect(function()
-    task.spawn(trackMatchEnd) task.wait(0.2)
+-- ============================================================================
+-- ⚡ [HYBRID INSTANT TRIGGER SYSTEM] ยิง Replay/Next ด้วยค่าสถานะ + Event
+-- ============================================================================
+local lastFireTime = 0
+local function fireReplay()
+    local now = tick()
+    if now - lastFireTime < 10 then return end
+    lastFireTime = now
+    
     pcall(function()
-        local gameRemotes = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("Game")
-        if gameRemotes then
-            if config.autoNext then
-                local nextEvent = gameRemotes:FindFirstChild("next")
-                if nextEvent and nextEvent:IsA("RemoteEvent") then nextEvent:FireServer() end
-            elseif config.autoReplay then
-                local replayEvent = gameRemotes:FindFirstChild("replay")
-                if replayEvent and replayEvent:IsA("RemoteEvent") then replayEvent:FireServer() end
-            end
+        if config.autoNext and NextEvent then
+            NextEvent:FireServer()
+        elseif config.autoReplay and ReplayEvent then
+            ReplayEvent:FireServer()
         end
     end)
+    task.spawn(trackMatchEnd)
+end
+
+ReplicatedStorage.Remotes.Game.ending.OnClientEvent:Connect(fireReplay)
+
+task.spawn(function()
+    local gameFolder = Workspace:WaitForChild("Game", 15)
+    local statsFolder = gameFolder and gameFolder:WaitForChild("Stats", 15)
+    if statsFolder then
+        local wonVal = statsFolder:WaitForChild("Won", 15)
+        local lostVal = statsFolder:WaitForChild("Lost", 15)
+        
+        local function checkValues()
+            if (wonVal and wonVal.Value > 0) or (lostVal and lostVal.Value > 0) then
+                fireReplay()
+            end
+        end
+        
+        if wonVal then wonVal.Changed:Connect(checkValues) end
+        if lostVal then lostVal.Changed:Connect(checkValues) end
+    end
 end)
+-- ============================================================================
 
 task.spawn(function()
     while true do
@@ -554,6 +595,15 @@ end)
 
 task.spawn(function()
     while true do task.wait(120) pcall(doAntiAFKClick) end
+end)
+
+task.spawn(function()
+    while true do
+        task.wait(300)
+        if preventAfkEv then
+            pcall(function() preventAfkEv:FireServer() end)
+        end
+    end
 end)
 
 task.spawn(function()

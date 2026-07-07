@@ -1,6 +1,16 @@
+if not game:IsLoaded() then
+    game.Loaded:Wait()
+end
+
+local Players = game:GetService("Players")
+local Player = Players.LocalPlayer
+while not Player do
+    task.wait(0.5)
+    Player = Players.LocalPlayer
+end
+
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
-local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -8,17 +18,20 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 local TeleportService = game:GetService("TeleportService")
 
-local Player = Players.LocalPlayer
 local Mouse = Player:GetMouse()
 
 local queue_on_teleport = queue_on_teleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport)
 local GITHUB_URL = "https://raw.githubusercontent.com/Diablo4925/AnimeSquadron/main/Beta.lua"
 
 local function queueAutoExecute()
-    if not queue_on_teleport then return end
+    if not queue_on_teleport then 
+        print("[AnimeSquadron Debug] queue_on_teleport not supported by executor!")
+        return 
+    end
     if GITHUB_URL == "" then return end
     pcall(function()
         queue_on_teleport("loadstring(game:HttpGet(\"" .. GITHUB_URL .. "\"))()")
+        print("[AnimeSquadron Debug] Script successfully queued for next teleport.")
     end)
 end
 
@@ -74,17 +87,22 @@ local function saveConfig()
     if writefile then
         pcall(function()
             writefile(CONFIG_FILE_NAME, HttpService:JSONEncode(config))
+            print("[AnimeSquadron Debug] Settings saved successfully.")
         end)
     end
 end
 
 local function loadConfig()
-    if readfile and isfile and isfile(CONFIG_FILE_NAME) then
+    if readfile then
         pcall(function()
-            local saved = HttpService:JSONDecode(readfile(CONFIG_FILE_NAME))
-            if type(saved) == "table" then
-                for k, v in pairs(saved) do
-                    config[k] = v
+            local content = readfile(CONFIG_FILE_NAME)
+            if content and content ~= "" then
+                local saved = HttpService:JSONDecode(content)
+                if type(saved) == "table" then
+                    for k, v in pairs(saved) do
+                        config[k] = v
+                    end
+                    print("[AnimeSquadron Debug] Settings loaded successfully.")
                 end
             end
         end)
@@ -94,7 +112,10 @@ end
 loadConfig()
 
 if config.autoExecute then
+    print("[AnimeSquadron Debug] AutoExecute is ENABLED in settings. Attempting to queue...")
     queueAutoExecute()
+else
+    print("[AnimeSquadron Debug] AutoExecute is DISABLED in settings.")
 end
 
 local Colors = {

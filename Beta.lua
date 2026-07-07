@@ -1,16 +1,8 @@
-if not game:IsLoaded() then
-    game.Loaded:Wait()
-end
-
-local Players = game:GetService("Players")
-local Player = Players.LocalPlayer
-while not Player do
-    task.wait(0.5)
-    Player = Players.LocalPlayer
-end
+task.wait(5)
 
 local TweenService = game:GetService("TweenService")
 local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -18,6 +10,7 @@ local MarketplaceService = game:GetService("MarketplaceService")
 local VirtualInputManager = game:GetService("VirtualInputManager")
 local TeleportService = game:GetService("TeleportService")
 
+local Player = Players.LocalPlayer
 local Mouse = Player:GetMouse()
 
 local queue_on_teleport = queue_on_teleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport)
@@ -35,22 +28,15 @@ local function queueAutoExecute()
     end)
 end
 
-local GameRemotes = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("Game")
-local ReplayEvent = GameRemotes and GameRemotes:FindFirstChild("replay")
-local NextEvent = GameRemotes and GameRemotes:FindFirstChild("next")
-local PlayerRemotes = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("Players")
-local preventAfkEv = PlayerRemotes and PlayerRemotes:FindFirstChild("prevent_afk")
+local remotes = ReplicatedStorage:WaitForChild("Remotes", 15)
+local gameRemotes = remotes and remotes:WaitForChild("Game", 15)
+local playerRemotes = remotes and remotes:WaitForChild("Players", 15)
 
-task.spawn(function()
-    if not ReplayEvent or not NextEvent then
-        local remotes = ReplicatedStorage:WaitForChild("Remotes", 10)
-        local gameRemotes = remotes and remotes:WaitForChild("Game", 10)
-        if gameRemotes then
-            ReplayEvent = ReplayEvent or gameRemotes:WaitForChild("replay", 10)
-            NextEvent = NextEvent or gameRemotes:WaitForChild("next", 10)
-        end
-    end
-end)
+local ReplayEvent = gameRemotes and gameRemotes:WaitForChild("replay", 15)
+local NextEvent = gameRemotes and gameRemotes:WaitForChild("next", 15)
+local endingEvent = gameRemotes and gameRemotes:WaitForChild("ending", 15)
+local getRemote = playerRemotes and playerRemotes:WaitForChild("get", 15)
+local preventAfkEv = playerRemotes and playerRemotes:WaitForChild("prevent_afk", 15)
 
 local oldUI = Player:WaitForChild("PlayerGui"):FindFirstChild("AnimeSquadronUI")
 if oldUI then oldUI:Destroy() end
@@ -403,7 +389,8 @@ local function flatten(t, path, res)
 end
 
 local function takeSnapshot()
-    local success, rawData = pcall(function() return ReplicatedStorage.Remotes.Players.get:InvokeServer() end)
+    if not getRemote then return end
+    local success, rawData = pcall(function() return getRemote:InvokeServer() end)
     if success and type(rawData) == "table" then oldSnapshot = flatten(rawData) end
 end
 
@@ -446,32 +433,34 @@ local function trackMatchEnd()
     sessionStats.intervalMatches = sessionStats.intervalMatches + 1
     
     if config.showItems then
-        local success, rawData = pcall(function() return ReplicatedStorage.Remotes.Players.get:InvokeServer() end)
-        if success and type(rawData) == "table" then
-            local newSnapshot = flatten(rawData)
-            local seen = {}
-            for p, val in pairs(newSnapshot) do
-                local lastKey = p:match("[^.]+$") or p
-                local lowerKey = lastKey:lower()
-                if not blacklist[lowerKey] then
-                    local oldVal = oldSnapshot[p]
-                    local gained = 0
-                    local isItem = false
-                    if not oldVal then
-                        if p:find("%.name$") and not p:find("%.stats%.") then gained = 1 isItem = true
-                        elseif type(val) == "number" and val > 0 and not p:find("codes") then gained = val end
-                    elseif type(val) == "number" and type(oldVal) == "number" and val > oldVal then gained = val - oldVal end
-                    if gained > 0 then
-                        local itemKey = isItem and tostring(val) or lastKey
-                        if not seen[itemKey] then
-                            seen[itemKey] = true
-                            sessionStats.itemsEarned[itemKey] = (sessionStats.itemsEarned[itemKey] or 0) + gained
-                            sessionStats.intervalItems[itemKey] = (sessionStats.intervalItems[itemKey] or 0) + gained
+        if getRemote then
+            local success, rawData = pcall(function() return getRemote:InvokeServer() end)
+            if success and type(rawData) == "table" then
+                local newSnapshot = flatten(rawData)
+                local seen = {}
+                for p, val in pairs(newSnapshot) do
+                    local lastKey = p:match("[^.]+$") or p
+                    local lowerKey = lastKey:lower()
+                    if not blacklist[lowerKey] then
+                        local oldVal = oldSnapshot[p]
+                        local gained = 0
+                        local isItem = false
+                        if not oldVal then
+                            if p:find("%.name$") and not p:find("%.stats%.") then gained = 1 isItem = true
+                            elseif type(val) == "number" and val > 0 and not p:find("codes") then gained = val end
+                        elseif type(val) == "number" and type(oldVal) == "number" and val > oldVal then gained = val - oldVal end
+                        if gained > 0 then
+                            local itemKey = isItem and tostring(val) or lastKey
+                            if not seen[itemKey] then
+                                seen[itemKey] = true
+                                sessionStats.itemsEarned[itemKey] = (sessionStats.itemsEarned[itemKey] or 0) + gained
+                                sessionStats.intervalItems[itemKey] = (sessionStats.intervalItems[itemKey] or 0) + gained
+                            end
                         end
                     end
                 end
+                oldSnapshot = newSnapshot
             end
-            oldSnapshot = newSnapshot
         end
     end
 end
@@ -601,7 +590,9 @@ local function fireReplay()
     task.spawn(trackMatchEnd)
 end
 
-ReplicatedStorage.Remotes.Game.ending.OnClientEvent:Connect(fireReplay)
+if endingEvent then
+    endingEvent.OnClientEvent:Connect(fireReplay)
+end
 
 task.spawn(function()
     local gameFolder = Workspace:WaitForChild("Game", 15)

@@ -11,6 +11,16 @@ local TeleportService = game:GetService("TeleportService")
 local Player = Players.LocalPlayer
 local Mouse = Player:GetMouse()
 
+local GITHUB_URL = "PASTE_YOUR_GITHUB_RAW_URL_HERE"
+
+local function queueAutoExecute()
+    if not queue_on_teleport then return end
+    if GITHUB_URL == "PASTE_YOUR_GITHUB_RAW_URL_HERE" or GITHUB_URL == "" then return end
+    pcall(function()
+        queue_on_teleport("loadstring(game:HttpGet(\"" .. GITHUB_URL .. "\"))()")
+    end)
+end
+
 local GameRemotes = ReplicatedStorage:FindFirstChild("Remotes") and ReplicatedStorage.Remotes:FindFirstChild("Game")
 local ReplayEvent = GameRemotes and GameRemotes:FindFirstChild("replay")
 local NextEvent = GameRemotes and GameRemotes:FindFirstChild("next")
@@ -40,7 +50,8 @@ local config = {
     showItems = true,
     autoReplay = true,
     autoNext = false,
-    intervalHours = 1
+    intervalHours = 1,
+    autoExecute = false
 }
 
 local sessionStats = {
@@ -80,6 +91,10 @@ local function loadConfig()
 end
 
 loadConfig()
+
+if config.autoExecute then
+    queueAutoExecute()
+end
 
 local Colors = {
     Background = Color3.fromRGB(44, 44, 44),
@@ -496,6 +511,10 @@ end
 local updateSessionTime = UIElements:CreateStatCard("Dashboard", "Session Accumulated Time", "00:00")
 local updateMatches = UIElements:CreateStatCard("Dashboard", "Total Matches Played", "0")
 
+local updateAutoExecStatus = UIElements:CreateStatCard("Dashboard", "Auto Execute Status", 
+    config.autoExecute and (queue_on_teleport and "🟢 ACTIVE" or "🟡 ON (No queue_on_teleport)") or "🔴 OFF"
+)
+
 local autoReplayToggle, autoNextToggle
 autoReplayToggle = UIElements:CreateToggle("Automation", "Auto Replay (End Match)", config.autoReplay, function(val)
     config.autoReplay = val
@@ -506,6 +525,21 @@ autoNextToggle = UIElements:CreateToggle("Automation", "Auto Next Stage", config
     config.autoNext = val
     if val then config.autoReplay = false if autoReplayToggle then autoReplayToggle:Set(false) end end
     saveConfig()
+end)
+
+UIElements:CreateToggle("Automation", "🔁 Auto Execute (on Server Change)", config.autoExecute, function(val)
+    config.autoExecute = val
+    saveConfig()
+    if val then
+        if queue_on_teleport then
+            queueAutoExecute()
+            updateAutoExecStatus("🟢 ACTIVE — Script will re-run on next server")
+        else
+            updateAutoExecStatus("🟡 ON — queue_on_teleport not supported")
+        end
+    else
+        updateAutoExecStatus("🔴 OFF")
+    end
 end)
 
 UIElements:CreateToggle("Webhook", "Enable Discord Webhook", config.enabled, function(val) config.enabled = val saveConfig() end)
@@ -529,9 +563,6 @@ task.spawn(function()
     end
 end)
 
--- ============================================================================
--- ⚡ [HYBRID INSTANT TRIGGER SYSTEM] ยิง Replay/Next ด้วยค่าสถานะ + Event
--- ============================================================================
 local lastFireTime = 0
 local function fireReplay()
     local now = tick()
@@ -567,7 +598,6 @@ task.spawn(function()
         if lostVal then lostVal.Changed:Connect(checkValues) end
     end
 end)
--- ============================================================================
 
 task.spawn(function()
     while true do
@@ -583,7 +613,7 @@ if guiServiceSuccess then
         task.wait(5)
         pcall(function()
             if #Players:GetPlayers() <= 1 then TeleportService:Teleport(game.PlaceId, Player)
-            else TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, Player) end
+            else TeleportService:TeleportToPlaceInstance(game.JobId, game.PlaceId, Player) end
         end)
     end)
 end

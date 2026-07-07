@@ -11,7 +11,7 @@ local TeleportService = game:GetService("TeleportService")
 local Player = Players.LocalPlayer
 local Mouse = Player:GetMouse()
 
-local GITHUB_URL = "PASTE_YOUR_GITHUB_RAW_URL_HERE"
+local GITHUB_URL = "https://raw.githubusercontent.com/Diablo4925/AnimeSquadron/refs/heads/main/Beta.lua"
 
 local function queueAutoExecute()
     if not queue_on_teleport then return end

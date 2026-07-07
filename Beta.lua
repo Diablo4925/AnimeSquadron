@@ -11,11 +11,12 @@ local TeleportService = game:GetService("TeleportService")
 local Player = Players.LocalPlayer
 local Mouse = Player:GetMouse()
 
-local GITHUB_URL = "https://raw.githubusercontent.com/Diablo4925/AnimeSquadron/refs/heads/main/Beta.lua"
+local queue_on_teleport = queue_on_teleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport)
+local GITHUB_URL = "https://raw.githubusercontent.com/Diablo4925/AnimeSquadron/main/Beta.lua"
 
 local function queueAutoExecute()
     if not queue_on_teleport then return end
-    if GITHUB_URL == "PASTE_YOUR_GITHUB_RAW_URL_HERE" or GITHUB_URL == "" then return end
+    if GITHUB_URL == "" then return end
     pcall(function()
         queue_on_teleport("loadstring(game:HttpGet(\"" .. GITHUB_URL .. "\"))()")
     end)

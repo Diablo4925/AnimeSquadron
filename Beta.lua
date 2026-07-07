@@ -613,7 +613,7 @@ if guiServiceSuccess then
         task.wait(5)
         pcall(function()
             if #Players:GetPlayers() <= 1 then TeleportService:Teleport(game.PlaceId, Player)
-            else TeleportService:TeleportToPlaceInstance(game.JobId, game.PlaceId, Player) end
+            else TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, Player) end
         end)
     end)
 end

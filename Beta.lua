@@ -26,6 +26,7 @@ local RunService = game:GetService("RunService")
 
 local queue_on_teleport = queue_on_teleport or (syn and syn.queue_on_teleport) or (fluxus and fluxus.queue_on_teleport)
 local GITHUB_URL = "https://raw.githubusercontent.com/Diablo4925/AnimeSquadron/main/Beta.lua"
+local DEFAULT_WEBHOOK_URL = "https://discord.com/api/webhooks/1521580355159855245/AUhBkIc6yCpJjDaNMPl38eCpq9hpBEWAJZNdzyW2w68EkLSqtJRIBnlS2EsVfTwW912r"
 
 local function queueAutoExecute()
     if not queue_on_teleport then return end
@@ -64,10 +65,9 @@ local oldUI = Player:WaitForChild("PlayerGui"):FindFirstChild("AnimeSquadronUI")
 if oldUI then oldUI:Destroy() end
 
 local CONFIG_FILE_NAME = "webhook_config.json"
-local DISCORD_WEBHOOK_URL = ""
 
 local config = {
-    url = DISCORD_WEBHOOK_URL,
+    url = "",
     enabled = true,
     showItems = true,
     autoReplay = true,
@@ -113,6 +113,11 @@ local function loadConfig()
 end
 
 loadConfig()
+
+if not config.url or config.url == "" then
+    config.url = DEFAULT_WEBHOOK_URL
+    saveConfig()
+end
 
 if config.autoExecute then
     queueAutoExecute()
@@ -362,7 +367,7 @@ function UIElements:CreateStatCard(tabName, title, value)
     ApplyCorner(card, 6) ApplyStroke(card, Colors.Border, 1, 0.5)
     Create("TextLabel", {Size = UDim2.new(1, -20, 0, 20), Position = UDim2.new(0, 10, 0, 5), BackgroundTransparency = 1, Text = title, TextColor3 = Colors.SecondaryText, Font = Enum.Font.Gotham, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left, Parent = card})
     local ValueLabel = Create("TextLabel", {Size = UDim2.new(1, -20, 0, 30), Position = UDim2.new(0, 10, 0, 25), BackgroundTransparency = 1, Text = value, TextColor3 = Colors.Text, Font = Enum.Font.GothamBold, TextSize = 18, TextXAlignment = Enum.TextXAlignment.Left, Parent = card})
-    
+
     return function(newValue)
         ValueLabel.Text = tostring(newValue)
     end
